@@ -13,29 +13,27 @@
  * limitations under the License.
  */
 apply plugin: 'com.android.library'
-apply plugin: 'maven'
-
 group "com.google.signin"
 
 if (project.hasProperty("pluginVersion")) {
-  project.version = project.pluginVersion
+    project.version = project.pluginVersion
 } else {
-  project.version '0-SNAPSHOT'
+    project.version '0-SNAPSHOT'
 }
 
 if (project.hasProperty("uploadDir")) {
-  project.ext.uploadDir = project.uploadDir
+    project.ext.uploadDir = project.uploadDir
 } else {
-  project.ext.uploadDir = "${buildDir}/m2repository"
+    project.ext.uploadDir = "${buildDir}/m2repository"
 }
 
 project.ext.baseName = "google-signin-support"
 
 android {
-    compileSdkVersion 26
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 26
+        compileSdkVersion 34
+        minSdkVersion 26
+        targetSdkVersion 34
         versionName project.version
         archivesBaseName = project.ext.baseName
         externalNativeBuild {
@@ -44,18 +42,18 @@ android {
             }
         }
         ndk {
-            abiFilters 'x86', 'armeabi-v7a', 'arm64-v8a'
+            abiFilters 'x86', 'armeabi-v7a', 'arm64-v8a', 'x86_64'
         }
     }
     lintOptions {
-        abortOnError (project.hasProperty("lintAbortOnError") &&
-                      (project.lintAbortOnError == "" ||
-                       project.lintAbortOnError.toBoolean()))
+        abortOnError(project.hasProperty("lintAbortOnError") &&
+                (project.lintAbortOnError == "" ||
+                        project.lintAbortOnError.toBoolean()))
     }
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     externalNativeBuild {
@@ -63,6 +61,13 @@ android {
             path "CMakeLists.txt"
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    ndkVersion "25.1.8937393"
 }
 
 // Rename the .aar file to be .srcaar to work around
@@ -78,39 +83,27 @@ artifacts {
 }
 
 task renameLibrary() {
-  doFirst {
-    copy {
-      from "${buildDir}/outputs/aar/${baseName}-release.aar"
-     into "${buildDir}"
-      rename {
-        String fn ->
-          return fn.replace("release.aar", "${version}.srcaar")
-      }
+    doFirst {
+        copy {
+            from "${buildDir}/outputs/aar/${baseName}-release.aar"
+            into "${buildDir}"
+            rename {
+                String fn ->
+                    return fn.replace("release.aar", "${version}.srcaar")
+            }
+        }
     }
-  }
 
-  doLast {
-    configurations.archives.with   {
-         artifacts.remove artifacts.find { it.extension == "aar"}
-      }
-  }
-}
-
-uploadArchives {
-  dependsOn renameLibrary
-  repositories {
-    mavenDeployer {
-      repository(url: uri(project.ext.uploadDir))
-
-      // Remove the dependencies from the pom file to simplify the
-      // the resolution process.
-      pom.whenConfigured {
-        p -> p.dependencies = []
-      }
+    doLast {
+        configurations.archives.with {
+            artifacts.remove artifacts.find { it.extension == "aar" }
+        }
     }
-  }
 }
 
 dependencies {
-        api "com.google.android.gms:play-services-auth:16.0.0"
+    implementation "androidx.credentials:credentials:1.2.2"
+    implementation "androidx.credentials:credentials-play-services-auth:1.2.2"
+    implementation "com.google.android.libraries.identity.googleid:googleid:21.1.1"
+    implementation "com.google.android.gms:play-services-auth:16.0.0"
 }
